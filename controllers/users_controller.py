@@ -1,11 +1,13 @@
 from flask import jsonify, request
 from models import User, db
 from bson.objectid import ObjectId
+from flask_jwt_extended import jwt_required
 
+@jwt_required()
 def users_route_handler():
     if request.method == 'GET':
         users = User.get_all()
-
+        
         return jsonify(users=User.list_to_json(users))
 
     elif request.method == 'POST':
