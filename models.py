@@ -106,6 +106,46 @@ class Publication:
                 _id = str(_id)
             self._id = _id
 
+    @staticmethod
+    def get_by_owner_and_visibility(user={}, visibility=[2]):
+        publications_cursor = db.publications.find({
+            '$or': [
+                {'visibility': {'$in':visibility}},
+                {'owner': ObjectId(user['sub'])}
+            ]
+        })
+        publications = []
+        for publication_dictionary in publications_cursor:
+            title = publication_dictionary['title']
+            description = publication_dictionary['description']
+            url = publication_dictionary['url']
+            owner = publication_dictionary['owner']
+            likes = publication_dictionary['likes']
+            tags = publication_dictionary['tags']
+            comments = publication_dictionary['comments']
+            visibility = publication_dictionary['visibility']
+            share_link = publication_dictionary['share_link']
+            shares = publication_dictionary['shares']
+            _id = publication_dictionary['_id']
+            publication = Publication(
+                title, 
+                description, 
+                url, 
+                owner=owner, 
+                likes=likes, tags=tags, 
+                comments=comments, 
+                visibility=visibility,
+                share_link=share_link, 
+                shares=shares,
+                _id=_id
+            )
+
+            publications.append(publication)
+
+        return publications
+
+                
+
     def create(self):
         result = db.publications.insert_one({
             'title': self.title,
