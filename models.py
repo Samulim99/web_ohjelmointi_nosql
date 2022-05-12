@@ -1,6 +1,8 @@
+import random
+import string
+from unittest import result
 import pymongo
 from bson.objectid import ObjectId
-from pymongo.server_api import ServerApi
 from passlib.hash import pbkdf2_sha256 as sha256
 
 from errors.not_found import NotFound
@@ -19,6 +21,7 @@ class User:
             _id = str(_id)
         self._id = _id
 
+#CRUD osa U
     def update(self):
         db.users.update_one({'_id': ObjectId(self._id)},
         {
@@ -37,9 +40,9 @@ class User:
     def delete(self):
         db.users.delete_one({'_id': ObjectId(self._id)})
 
-    """ @staticmethod
+    @staticmethod
     def delete_by_id(_id):
-        db.users.delete_one({'_id': ObjectId(_id)}) """
+        db.publications.delete_one({'_id': ObjectId(_id)})
 
     #CRUD:n R (READ) => haetaan kaikki käyttäjät
     @staticmethod
@@ -106,7 +109,7 @@ class Publication:
                 _id = str(_id)
             self._id = _id
 
-    @staticmethod
+    staticmethod
     def get_by_owner_and_visibility(user={}, visibility=[2]):
         publications_cursor = db.publications.find({
             '$or': [
@@ -144,6 +147,68 @@ class Publication:
 
         return publications
 
+    @staticmethod
+    def get_by_visibility(visibility=2):
+        publications_cursor = db.publications.find({'visibility': visibility})
+        publications = []
+        for publication_dictionary in publications_cursor:
+            title = publication_dictionary['title']
+            description = publication_dictionary['description']
+            url = publication_dictionary['url']
+            owner = publication_dictionary['owner']
+            likes = publication_dictionary['likes']
+            tags = publication_dictionary['tags']
+            comments = publication_dictionary['comments']
+            visibility = publication_dictionary['visibility']
+            share_link = publication_dictionary['share_link']
+            shares = publication_dictionary['shares']
+            _id = publication_dictionary['_id']
+            publication = Publication(
+                title, 
+                description, 
+                url, 
+                owner=owner, 
+                likes=likes, tags=tags, 
+                comments=comments, 
+                visibility=visibility,
+                share_link=share_link, 
+                shares=shares,
+                _id=_id
+            )
+
+            publications.append(publication)
+
+        return publications
+
+
+    @staticmethod
+    def get_by_id(_id):
+        publication_dictionary = db.publications.find_one({'_id': ObjectId(_id)})
+        title = publication_dictionary['title']
+        description = publication_dictionary['description']
+        url = publication_dictionary['url']
+        owner = publication_dictionary['owner']
+        likes = publication_dictionary['likes']
+        tags = publication_dictionary['tags']
+        comments = publication_dictionary['comments']
+        visibility = publication_dictionary['visibility']
+        share_link = publication_dictionary['share_link']
+        shares = publication_dictionary['shares']
+        _id = publication_dictionary['_id']
+        publication = Publication(
+            title, 
+            description, 
+            url, 
+            owner=owner, 
+            likes=likes, tags=tags, 
+            comments=comments, 
+            visibility=visibility,
+            share_link=share_link, 
+            shares=shares,
+            _id=_id
+            )
+
+        return publication
                 
 
     def create(self):
@@ -188,13 +253,19 @@ class Publication:
 
 
     def to_json(self):
+        owner = self.owner
+        likes =self.likes
+        for count, user_id in enumerate(likes):
+            likes[count] = str(user_id)
+        if owner is not None:
+            owner = str(owner)
         publication_in_json_format = {
             '_id': self._id,
             'title': self.title,
             'description': self.description,
             'url': self.url,
-            'owner': self.owner,
-            'likes': self.likes,
+            'owner': owner,
+            'likes': likes,
             'shares': self.shares,
             'tags': self.tags,
             'comments':self. comments,
@@ -202,4 +273,27 @@ class Publication:
             'share_link': self.share_link
 
         }
+        
         return publication_in_json_format
+
+    def update(self):
+        db.publications.update_one({'_id': ObjectId(self._id)},
+        {
+        '$set': {'title': self.title, 'description': self.description}
+        })
+
+    def like(self):
+         db.publications.update_one({'_id': ObjectId(self._id)},
+        {
+            '$set': {'likes': self.likes}
+        })
+    
+    def share(self):
+        _filter = {'_id': ObjectId(self._id)}
+        if self.share_link is None:
+            letters = string.ascii_lowercase
+            self.share_link = ''.join(random.choice(letters) for _ in range(8))
+            _update = {'$set': {'share_link': self.share_link, 'shares':1}}
+        else: 
+            _update = {'$inc': {'shares':1}}
+        db.publications.update_one(_filter, _update)
